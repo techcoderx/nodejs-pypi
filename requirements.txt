@@ -2,3 +2,5 @@ wheel
 twine
 libarchive-c
 pytest
+beautifulsoup4
+requests

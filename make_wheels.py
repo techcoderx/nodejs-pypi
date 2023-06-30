@@ -7,16 +7,17 @@ from email.message import EmailMessage
 from wheel.wheelfile import WheelFile
 from zipfile import ZipInfo, ZIP_DEFLATED
 from inspect import cleandoc
-
+from bs4 import BeautifulSoup
+import requests
 
 # Versions to build if run as a script:
-BUILD_VERSIONS = ('14.19.3', '16.15.1', '18.4.0')
+BUILD_VERSIONS = ('18','20')
 
 # Suffix to append to the Wheel
 # For pre release versions this should be 'aN', e.g. 'a1'
 # For release versions this should be ''
 # See https://peps.python.org/pep-0427/#file-name-convention for details.
-BUILD_SUFFIX = 'a3'
+BUILD_SUFFIX = 'a4'
 
 # Main binary for node
 # Path of binary inn downloaded distribution to match
@@ -57,6 +58,16 @@ _mismatched_versions = UNOFFICIAL_NODEJS_BUILDS - set(PLATFORMS.keys())
 if _mismatched_versions:
     raise Exception(f"A version mismatch occurred. Check the usage of {_mismatched_versions}")
 
+def get_latest_version(major_release):
+    base_url = f'https://nodejs.org/dist/latest-v{major_release}.x/'
+    response = requests.get(base_url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    links = soup.find_all('a')
+    for link in links:
+        href = link.get('href')
+        if href and href.startswith('node-v'):
+            v = href.replace('node-v','').split('.')
+            return f'{v[0]}.{v[1]}.{v[2].split("-")[0]}'
 
 class ReproducibleWheelFile(WheelFile):
     def writestr(self, zinfo, *args, **kwargs):
@@ -340,7 +351,7 @@ def make_nodejs_version(node_version, suffix=''):
 
 def main():
     for node_version in BUILD_VERSIONS:
-        make_nodejs_version(node_version, suffix=BUILD_SUFFIX)
+        make_nodejs_version(get_latest_version(node_version), suffix=BUILD_SUFFIX)
 
 if __name__ == '__main__':
     main()
